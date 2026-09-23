@@ -1,45 +1,71 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
-import type { Session } from '../types';
-import { navigationItems, type Section } from './sections';
-import { appStyles as styles } from '../theme/appStyles';
-import { roleName } from '../utils/formatters';
-import { HomeScreen } from '../features/dashboard/HomeScreen';
-import { DprsScreen } from '../features/dpr/DprsScreen';
-import { TasksScreen } from '../features/tasks/TasksScreen';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AttendanceScreen } from '../features/attendance/AttendanceScreen';
-import { ProjectsScreen } from '../features/projects/ProjectsScreen';
-import { StockScreen } from '../features/stock/StockScreen';
-import { CategoriesScreen, VendorsScreen } from '../features/shared/FeatureScreens';
-import { FinanceScreen } from '../features/finance/FinanceScreen';
-import { PeopleScreen } from '../features/people/PeopleScreen';
-import { DocumentsScreen } from '../features/documents/DocumentsScreen';
 import { AuditScreen } from '../features/audit/AuditScreen';
+import { HomeScreen } from '../features/dashboard/HomeScreen';
+import { DocumentsScreen } from '../features/documents/DocumentsScreen';
+import { DprsScreen } from '../features/dpr/DprsScreen';
+import { FinanceScreen } from '../features/finance/FinanceScreen';
+import { MoreScreen } from '../features/more/MoreScreen';
+import { PeopleScreen } from '../features/people/PeopleScreen';
 import { ProfileScreen } from '../features/profile/ProfileScreen';
+import { ProjectsScreen } from '../features/projects/ProjectsScreen';
+import { CategoriesScreen } from '../features/categories/CategoriesScreen';
+import { VendorsScreen } from '../features/vendors/VendorsScreen';
+import { StockScreen } from '../features/stock/StockScreen';
+import { TasksScreen } from '../features/tasks/TasksScreen';
+import { primaryTabs, secondarySections, type Section } from './sections';
+import { colors, shadows, spacing, typography } from '../theme';
+import type { Session } from '../types';
 
 export function AppShell({ session, onLogout }: { session: Session; onLogout: () => Promise<void> }) {
   const [section, setSection] = useState<Section>('home');
-  const allowedItems = useMemo(() => navigationItems.filter(item => item.roles.includes(session.user.role)), [session.user.role]);
-  const initials = session.user.name.split(' ').map(part => part[0]).slice(0, 2).join('');
-  return <View style={{ flex: 1 }}>
-    <View style={styles.topbar}><View><Text style={styles.topbarName}>{session.user.name}</Text><Text style={styles.topbarRole}>{roleName(session.user.role)} workspace</Text></View><Pressable style={styles.avatar} onPress={() => setSection('profile')}><Text style={styles.avatarText}>{initials}</Text></Pressable></View>
-    <View style={{ flex: 1 }}>
-      {section === 'home' && <HomeScreen role={session.user.role} onNavigate={setSection} />}
-      {section === 'dpr' && <DprsScreen role={session.user.role} />}
-      {section === 'tasks' && <TasksScreen role={session.user.role} />}
-      {section === 'attendance' && <AttendanceScreen role={session.user.role} />}
-      {section === 'projects' && <ProjectsScreen role={session.user.role} />}
-      {section === 'stock' && <StockScreen role={session.user.role} />}
-      {section === 'categories' && <CategoriesScreen role={session.user.role} />}
-      {section === 'vendors' && <VendorsScreen role={session.user.role} />}
-      {section === 'finance' && <FinanceScreen role={session.user.role} />}
-      {section === 'people' && <PeopleScreen role={session.user.role} />}
-      {section === 'documents' && <DocumentsScreen />}
-      {section === 'audit' && <AuditScreen role={session.user.role} />}
-      {section === 'profile' && <ProfileScreen user={session.user} onLogout={onLogout} />}
+  const insets = useSafeAreaInsets();
+  const visibleTabs = useMemo(() => primaryTabs.filter(tab => tab.roles.includes(session.user.role)), [session.user.role]);
+  const isSecondary = secondarySections.includes(section);
+  const activeTab: Section = isSecondary ? 'more' : section;
+
+  const backToMore = () => setSection('more');
+
+  return (
+    <View style={styles.root}>
+      <View style={{ flex: 1 }}>
+        {section === 'home' && <HomeScreen role={session.user.role} userName={session.user.name} onNavigate={setSection} />}
+        {section === 'dpr' && <DprsScreen role={session.user.role} />}
+        {section === 'tasks' && <TasksScreen role={session.user.role} />}
+        {section === 'attendance' && <AttendanceScreen role={session.user.role} onBack={backToMore} />}
+        {section === 'projects' && <ProjectsScreen role={session.user.role} />}
+        {section === 'stock' && <StockScreen role={session.user.role} onBack={backToMore} />}
+        {section === 'categories' && <CategoriesScreen role={session.user.role} onBack={backToMore} />}
+        {section === 'vendors' && <VendorsScreen role={session.user.role} onBack={backToMore} />}
+        {section === 'finance' && <FinanceScreen role={session.user.role} onBack={backToMore} />}
+        {section === 'people' && <PeopleScreen role={session.user.role} onBack={backToMore} />}
+        {section === 'documents' && <DocumentsScreen onBack={backToMore} />}
+        {section === 'audit' && <AuditScreen role={session.user.role} onBack={backToMore} />}
+        {section === 'profile' && <ProfileScreen user={session.user} onLogout={onLogout} onBack={backToMore} />}
+        {section === 'more' && <MoreScreen role={session.user.role} onNavigate={setSection} />}
+      </View>
+      <View style={[styles.nav, shadows.sm, { paddingBottom: Math.max(insets.bottom, spacing.sm) }]}>
+        {visibleTabs.map(tab => {
+          const active = activeTab === tab.id;
+          return (
+            <Pressable key={tab.id} onPress={() => setSection(tab.id)} style={styles.navItem} hitSlop={4} accessibilityRole="tab" accessibilityState={{ selected: active }}>
+              <Ionicons name={active ? tab.iconActive : tab.icon} size={23} color={active ? colors.primary : colors.textMuted} />
+              <Text style={[styles.navLabel, active && styles.navLabelActive]}>{tab.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
     </View>
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.nav} contentContainerStyle={styles.navItems}>
-      {allowedItems.map(item => <Pressable key={item.id} onPress={() => setSection(item.id)} style={[styles.navItem, section === item.id && styles.navActive]}><Text style={styles.navIcon}>{item.icon}</Text><Text style={[styles.navLabel, section === item.id && styles.navLabelActive]}>{item.label}</Text></Pressable>)}
-    </ScrollView>
-  </View>;
+  );
 }
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.background },
+  nav: { flexDirection: 'row', backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.sm },
+  navItem: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 3, paddingVertical: spacing.xs },
+  navLabel: { ...typography.caption, color: colors.textMuted, textTransform: 'none' },
+  navLabelActive: { color: colors.primary },
+});
